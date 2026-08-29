@@ -1,0 +1,689 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Nepal Infrastructure Impact Map</title>
+  <meta name="description" content="Explore reported damage to roads, bridges, hospitals, power infrastructure, and other critical assets following the 2026 Nepal floods.">
+  <link rel="canonical" href="https://nepaldisaster.org/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Nepal Disaster Impact Map">
+  <meta property="og:title" content="Nepal Disaster Impact Map">
+  <meta property="og:description" content="Explore reported damage to critical infrastructure following the 2026 Nepal floods.">
+  <meta property="og:url" content="https://nepaldisaster.org/">
+  <meta property="og:image" content="https://nepaldisaster.org/static/nepal-disaster-impact-map-preview.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1640">
+  <meta property="og:image:height" content="1034">
+  <meta property="og:image:alt" content="Nepal Disaster Impact Map showing infrastructure damage clusters">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Nepal Disaster Impact Map">
+  <meta name="twitter:description" content="Explore reported damage to critical infrastructure following the 2026 Nepal floods.">
+  <meta name="twitter:image" content="https://nepaldisaster.org/static/nepal-disaster-impact-map-preview.png">
+  <link rel="icon" type="image/png" href="https://icons.iconarchive.com/icons/twitter/twemoji-flags/256/Nepal-Flag-icon.png">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+  <style>
+    * { box-sizing: border-box; }
+    html, body { width:100%; height:100%; margin:0; padding:0; overflow:hidden; }
+    
+    :root { font-family: Inter, system-ui, -apple-system, sans-serif; }
+    body { background:#f6f7f8; color:#17212b; }
+    
+    header { position:absolute; top:0; left:0; right:0; z-index:100; padding:12px 20px; background:#fff; border-bottom:1px solid #dce1e5; }
+    h1 { margin:0 0 2px; font-size:18px; }
+    .sub { color:#64717d; font-size:12px; }
+    .header-links { position:absolute; top:12px; right:20px; display:flex; gap:6px; }
+    .header-link { display:inline-flex; align-items:center; min-height:30px; padding:0 10px; border:1px solid #dce1e5; border-radius:7px; color:#34424e; background:#fff; font-size:11px; font-weight:600; text-decoration:none; }
+    .header-link svg { width:14px; height:14px; margin-right:6px; fill:currentColor; }
+    .header-link:hover { border-color:#2563eb; background:#eff6ff; color:#1d4ed8; }
+    .donate-link { background:#dc2626; border-color:#dc2626; color:#fff; }
+    .donate-link:hover { background:#b91c1c; border-color:#b91c1c; color:#fff; }
+    .impact-marker-icon { background:transparent; border:0; }
+    .impact-marker-dot { display:block; width:14px; height:14px; border:2px solid; border-radius:50%; opacity:.85; box-shadow:0 1px 3px rgba(0,0,0,.28); }
+    .impact-cluster-icon { background:transparent; border:0; }
+    .impact-cluster-bubble { display:flex; align-items:center; justify-content:center; width:36px; height:36px; border:3px solid rgba(255,255,255,.85); border-radius:50%; color:#fff; font-size:12px; font-weight:750; box-shadow:0 1px 5px rgba(0,0,0,.35); }
+    
+    .controls { position:absolute; top:60px; left:0; right:0; z-index:1200; display:grid; grid-template-columns:1fr 1fr 150px 120px; gap:8px; padding:12px 20px; background:#fff; border-bottom:1px solid #dce1e5; }
+    .search-wrap { position:relative; min-width:0; }
+    .search-wrap input { width:100%; }
+    .search-suggestions { display:none; position:absolute; top:44px; left:0; right:0; z-index:1300; max-height:260px; overflow-y:auto; padding:4px; background:#fff; border:1px solid #ccd3d9; border-radius:8px; box-shadow:0 8px 20px rgba(23,33,43,.14); }
+    .search-suggestions.visible { display:block; }
+    .search-suggestion { display:block; width:100%; min-height:0; padding:8px 9px; border:0; border-radius:5px; background:#fff; color:#17212b; text-align:left; font-size:12px; cursor:pointer; }
+    .search-suggestion:hover, .search-suggestion.active { background:#eff6ff; }
+    .search-suggestion strong { display:block; font-size:12px; font-weight:650; }
+    .search-suggestion small { display:block; margin-top:2px; color:#64717d; font-size:10px; }
+    input,select,button { min-height:40px; border-radius:8px; border:1px solid #ccd3d9; padding:0 12px; font-size:13px; background:#fff; }
+    button { cursor:pointer; font-weight:600; }
+    .meta { position:absolute; top:130px; left:0; right:0; z-index:100; padding:0 20px 8px; font-size:12px; color:#5d6872; background:#fff; border-bottom:1px solid #dce1e5; }
+    
+    #map { position:absolute; top:160px; left:0; right:0; bottom:0; width:100%; height:calc(100% - 160px); }
+    
+    .sidebar { position:fixed; top:160px; left:12px; width:300px; background:rgba(255, 255, 255, 0.95); border:1px solid #dce1e5; border-radius:12px; padding:12px; overflow-y:auto; z-index:1000; backdrop-filter:blur(4px); box-shadow:0 4px 12px rgba(0,0,0,0.15); max-height:calc(100vh - 200px); height:auto; }
+    .sidebar.hidden { display:none; }
+    .sidebar-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid #e5e9ec; cursor:move; user-select:none; }
+    .sidebar-header:active { cursor:grabbing; }
+    .sidebar-close { background:none; border:none; font-size:18px; cursor:pointer; padding:0; color:#64717d; }
+    .sidebar-close:hover { color:#17212b; }
+    
+    .summary-box { background:transparent; margin-bottom:12px; }
+    .summary-intro { max-width:270px; color:#64717d; font-size:11px; line-height:1.4; margin:-3px 0 12px; }
+    .summary-total { display:flex; align-items:baseline; gap:8px; padding:11px 0 13px 11px; background:transparent; color:#17212b; border-left:3px solid #dc2626; margin-bottom:12px; }
+    .summary-total strong { font-size:28px; line-height:1; letter-spacing:-.03em; color:#dc2626; }
+    .summary-total span { font-size:12px; font-weight:650; color:#64717d; text-transform:uppercase; letter-spacing:.04em; }
+    .summary-section { margin-top:14px; }
+    .summary-section-title { display:flex; justify-content:space-between; align-items:center; margin:0 0 7px; color:#64717d; text-transform:uppercase; letter-spacing:.06em; font-size:10px; font-weight:700; }
+    .summary-section-title span { text-transform:none; letter-spacing:0; font-weight:400; }
+    .severity-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+    .damage-stat { min-height:58px; padding:8px 9px; background:#f6f7f8; border-radius:7px; cursor:pointer; transition:all 0.2s; border:1px solid transparent; text-align:left; }
+    .damage-stat:hover { border-color:#cbd5df; transform:translateY(-1px); }
+    .damage-stat.active { border-color:#2563eb; background:#dbeafe; box-shadow:0 0 0 1px #2563eb inset; }
+    .damage-stat-label { display:flex; align-items:center; gap:6px; color:#4b5965; font-size:10px; line-height:1.2; }
+    .damage-stat-dot { width:7px; height:7px; border-radius:50%; flex:none; }
+    .damage-stat-value { display:block; font-weight:750; font-size:18px; margin-top:5px; color:#17212b; }
+    .category-buttons { display:flex; flex-wrap:wrap; gap:6px; }
+    .category-button { min-height:32px; padding:0 10px; border:1px solid #dce1e5; border-radius:7px; background:#fff; color:#34424e; font-size:11px; font-weight:600; cursor:pointer; }
+    .category-button:hover, .category-button.active { border-color:#2563eb; background:#eff6ff; color:#1d4ed8; }
+    .filter-state { display:none; align-items:center; justify-content:space-between; gap:8px; padding:7px 9px; border-radius:7px; background:#eff6ff; color:#1d4ed8; font-size:11px; margin-top:10px; }
+    .filter-state.visible { display:flex; }
+    .filter-state button { min-height:0; padding:0; border:0; color:#1d4ed8; background:transparent; font-size:11px; }
+    
+    .damage-stat-value.destroyed { color:#dc2626; }
+    .damage-stat-value.damaged { color:#b45309; }
+    .damage-stat-value.possibly { color:#2563eb; }
+    .damage-stat-value.none { color:#059669; }
+    
+    .loading-overlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:9999; }
+    .loading-overlay.hidden { display:none; }
+    .loading-spinner { background:#fff; border-radius:16px; padding:40px; text-align:center; box-shadow:0 10px 40px rgba(0,0,0,0.2); }
+    .spinner { width:50px; height:50px; margin:0 auto 16px; border:4px solid #e5e9ec; border-top-color:#2563eb; border-radius:50%; animation:spin 0.8s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .loading-text { font-size:16px; font-weight:600; color:#17212b; margin-bottom:8px; }
+    .loading-subtext { font-size:12px; color:#5d6872; }
+    
+    @media(max-width:900px){
+      header { height:92px; padding:10px 12px 42px; }
+      h1 { font-size:16px; line-height:1.2; }
+      .sub { display:none; }
+      .header-links { top:auto; right:12px; bottom:8px; gap:4px; }
+      .header-link { min-height:26px; padding:0 7px; font-size:10px; }
+      .header-link svg, .header-link img { width:12px; height:12px; margin-right:4px; }
+      .controls { top:92px; grid-template-columns:minmax(0,1fr) 128px; gap:6px; padding:8px 12px; }
+      #grading, #search-btn { display:none; }
+      .meta { top:148px; padding:0 12px 8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+      #map { top:176px; height:calc(100% - 176px); }
+      .sidebar { display:block; top:auto; left:0; right:0; bottom:0; width:auto; max-height:190px; padding:9px 12px 11px; overflow-y:auto; border-width:1px 0 0; border-radius:16px 16px 0 0; background:rgba(255,255,255,.98); box-shadow:0 -6px 18px rgba(23,33,43,.14); }
+      .sidebar-header { margin:0 0 5px; padding:0; border:0; cursor:default; }
+      .sidebar-header > div { font-size:12px !important; }
+      .sidebar-close { font-size:16px; }
+      .summary-box { margin:0; }
+      .summary-intro { display:none; }
+      .summary-total { display:none; }
+      .summary-section { margin:5px 0 0; }
+      .summary-section-title { display:none; }
+      .severity-grid, .category-buttons { display:flex; flex-wrap:wrap; gap:5px; padding:1px 0; }
+      .severity-grid::-webkit-scrollbar, .category-buttons::-webkit-scrollbar { display:none; }
+      .damage-stat { display:inline-flex; align-items:center; min-height:28px; padding:0 8px; border-radius:999px; flex:0 0 auto; gap:4px; }
+      .damage-stat-label { display:flex; align-items:center; gap:4px; font-size:10px; line-height:1; white-space:nowrap; }
+      .damage-stat-dot { display:none; }
+      .damage-stat-value { display:inline; margin:0; font-size:11px; line-height:1; }
+      .category-buttons { margin-top:0; }
+      .category-button { min-height:27px; padding:0 9px; border-radius:999px; flex:0 0 auto; font-size:10px; white-space:nowrap; }
+      .filter-state { justify-content:flex-end; margin-top:5px; padding:0; background:transparent; }
+      #filter-state-text { display:none; }
+      .filter-state button { min-height:24px; padding:0 8px; border:1px solid #bfdbfe; border-radius:999px; background:#eff6ff; font-size:10px; }
+    }
+  </style>
+</head>
+<body>
+<div class="loading-overlay hidden" id="loading-overlay">
+  <div class="loading-spinner">
+    <div class="spinner"></div>
+    <div class="loading-text">Loading Infrastructure Data</div>
+    <div class="loading-subtext">Fetching from Copernicus CEMS API...</div>
+  </div>
+</div>
+
+<header>
+  <h1>Nepal Flood: Infrastructure Impact Map <span style="font-size:14px; color:#64717d;">(Aug 2026)</span></h1>
+  <div class="sub">Roads, bridges, power plants, and facilities damage assessment</div>
+  <div class="header-links">
+    <a class="header-link" href="https://github.com/sraddhanjali/nepal-flood-map" target="_blank" rel="noopener noreferrer">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.64 0 8.13c0 3.59 2.29 6.64 5.47 7.72.4.08.55-.18.55-.39 0-.19-.01-.7-.01-1.38-2.23.5-2.7-1.1-2.7-1.1-.36-.95-.89-1.2-.89-1.2-.73-.51.06-.5.06-.5.81.06 1.24.85 1.24.85.72 1.26 1.88.9 2.34.69.07-.53.28-.9.51-1.11-1.78-.21-3.65-.91-3.65-4.03 0-.89.31-1.62.82-2.19-.08-.21-.36-1.04.08-2.16 0 0 .67-.22 2.2.84A7.38 7.38 0 0 1 8 4.98c.68 0 1.36.09 2 .28 1.53-1.06 2.2-.84 2.2-.84.44 1.12.16 1.95.08 2.16.51.57.82 1.3.82 2.19 0 3.13-1.87 3.81-3.65 4.02.29.26.54.77.54 1.55 0 1.12-.01 2.02-.01 2.29 0 .21.15.47.55.39A8.14 8.14 0 0 0 16 8.13C16 3.64 12.42 0 8 0Z"/></svg>
+      GitHub
+    </a>
+    <a class="header-link donate-link" href="https://pmdrf.nchl.com.np/index.html" target="_blank" rel="noopener noreferrer">Donate to Nepal</a>
+  </div>
+</header>
+
+<div class="controls">
+  <div class="search-wrap">
+    <input id="q" type="search" autocomplete="off" placeholder="Search infrastructure, damage, or place">
+    <div class="search-suggestions" id="search-suggestions" role="listbox"></div>
+  </div>
+  <select id="infra-type">
+    <option value="">All Infrastructure</option>
+    <option value="road">Roads</option>
+    <option value="bridge">Bridges</option>
+    <option value="power">Power Plants</option>
+    <option value="hospital">Hospitals</option>
+    <option value="airfield">Airfields</option>
+    <option value="heliport">Heliports</option>
+  </select>
+  <select id="grading">
+    <option value="">All Damage Grades</option>
+    <option value="destroyed">Destroyed</option>
+    <option value="damaged">Damaged</option>
+    <option value="possibly damaged">Possibly Damaged</option>
+    <option value="no visible damage">No Damage</option>
+  </select>
+  <button id="search-btn">Search</button>
+</div>
+<div id="meta" class="meta">Loading infrastructure data…</div>
+
+<div id="map"></div>
+
+<div class="sidebar hidden" id="sidebar">
+  <div class="sidebar-header">
+    <div style="font-size:13px; font-weight:700;">Impact Summary</div>
+    <button class="sidebar-close" id="sidebar-close" title="Close">✕</button>
+  </div>
+  <div class="summary-box">
+    <div class="summary-intro">Mapped infrastructure and assessed damage. Select any value to filter the map.</div>
+    <div id="impact-summary"></div>
+    <div class="filter-state" id="filter-state"><span id="filter-state-text"></span><button id="filter-state-clear" type="button">Clear</button></div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script>
+const sidebar = document.getElementById('sidebar');
+const sidebarHeader = document.querySelector('.sidebar-header');
+let isDragging = false;
+let offsetX = 0;
+let offsetY = 0;
+
+sidebarHeader.addEventListener('mousedown', (e) => {
+  isDragging = true;
+  offsetX = e.clientX - sidebar.offsetLeft;
+  offsetY = e.clientY - sidebar.offsetTop;
+  sidebar.style.cursor = 'grabbing';
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (isDragging) {
+    sidebar.style.left = (e.clientX - offsetX) + 'px';
+    sidebar.style.top = (e.clientY - offsetY) + 'px';
+  }
+});
+
+document.addEventListener('mouseup', () => {
+  isDragging = false;
+  sidebar.style.cursor = 'auto';
+});
+
+document.getElementById('sidebar-close').addEventListener('click', () => {
+  sidebar.classList.add('hidden');
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'i' && e.ctrlKey) {
+    e.preventDefault();
+    sidebar.classList.toggle('hidden');
+  }
+});
+
+function hideLoading() {
+  document.getElementById("loading-overlay").classList.add("hidden");
+}
+
+function showLoading() {
+  document.getElementById("loading-overlay").classList.remove("hidden");
+}
+
+const map = L.map('map').setView([28.15, 85.3], 10);
+map.attributionControl.addAttribution('<a href="https://mapping.emergency.copernicus.eu/activations/EMSR927/" target="_blank" rel="noopener noreferrer">Copernicus CEMS data</a>');
+
+const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19,
+  attribution: '&copy; OpenStreetMap',
+});
+
+const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+  maxZoom: 19,
+  attribution: 'Tiles &copy; Esri',
+});
+
+const terrainLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+  maxZoom: 19,
+  attribution: 'Tiles &copy; Esri',
+});
+
+streetLayer.addTo(map);
+
+const baseLayers = {
+  "Street": streetLayer,
+  "Satellite": satelliteLayer,
+  "Terrain / Topographic": terrainLayer
+};
+
+L.control.layers(baseLayers).addTo(map);
+
+const markerGroup = L.markerClusterGroup({
+  showCoverageOnHover: false,
+  maxClusterRadius: 50,
+  disableClusteringAtZoom: 17,
+  chunkedLoading: true,
+  iconCreateFunction: cluster => {
+    const severity = { "no visible damage": 1, "possibly damaged": 2, "damaged": 3, "destroyed": 4 };
+    let highest = "no visible damage";
+    cluster.getAllChildMarkers().forEach(marker => {
+      const damage = (marker._feature?.damage_grade || "").toLowerCase();
+      const level = damage.includes("destroyed") ? "destroyed"
+        : damage.includes("possibly") ? "possibly damaged"
+        : damage.includes("damaged") ? "damaged"
+        : "no visible damage";
+      if (severity[level] > severity[highest]) highest = level;
+    });
+    const color = getDamageColor(highest);
+    return L.divIcon({
+      html: `<span class="impact-cluster-bubble" style="background:${color}">${cluster.getChildCount()}</span>`,
+      className: "impact-cluster-icon",
+      iconSize: [36, 36]
+    });
+  }
+}).addTo(map);
+let currentFeatures = [];
+let activeLabel = null;
+let summaryData = {};
+let activeFilters = { type: null, grading: null };
+let allFeatures = [];
+let searchTimer = null;
+
+function getCoordinates(geometry) {
+  if (!geometry) return null;
+
+  const toLatLng = (coordinates) => {
+    if (!Array.isArray(coordinates) || coordinates.length < 2) return null;
+    const lng = Number(coordinates[0]);
+    const lat = Number(coordinates[1]);
+    return Number.isFinite(lat) && Number.isFinite(lng) ? [lat, lng] : null;
+  };
+  
+  if (geometry.type === "Point") {
+    return toLatLng(geometry.coordinates);
+  } else if (geometry.type === "LineString" && geometry.coordinates.length > 0) {
+    return toLatLng(geometry.coordinates[0]);
+  } else if (geometry.type === "Polygon" && geometry.coordinates[0].length > 0) {
+    return toLatLng(geometry.coordinates[0][0]);
+  } else if (geometry.type === "MultiLineString" && geometry.coordinates[0].length > 0) {
+    return toLatLng(geometry.coordinates[0][0]);
+  }
+  
+  return null;
+}
+
+function getDamageColor(damage) {
+  const d = (damage || "").toLowerCase();
+  if (d.includes("destroyed")) return "#dc2626";
+  if (d.includes("damaged") && !d.includes("possibly")) return "#f59e0b";
+  if (d.includes("possibly")) return "#3b82f6";
+  return "#10b981";
+}
+
+function createMarker(feature, idx) {
+  const latlng = getCoordinates(feature.geometry);
+  if (!latlng) return null;
+  
+  const color = getDamageColor(feature.damage_grade);
+  const marker = L.marker(latlng, {
+    icon: L.divIcon({
+      className: "impact-marker-icon",
+      html: `<span class="impact-marker-dot" style="background:${color}; border-color:${color}"></span>`,
+      iconSize: [14, 14],
+      iconAnchor: [7, 7]
+    })
+  });
+  
+  const gmapsUrl = `https://www.google.com/maps/@${latlng[0]},${latlng[1]},15z`;
+  const displayType = feature.display_type.replace("211-Highways, Streets and Roads", "Roads");
+  const popupHtml = `
+    <div style="font-size:12px; max-width:220px;">
+      <strong>${feature.display_name}</strong><br>
+      <small>${displayType}</small><br>
+      <br>
+      <b>Damage:</b> ${feature.damage_grade}<br>
+      <b>🗺️</b> ${feature.aoi}<br>
+      <br>
+      <b>GPS:</b> <span style="cursor:pointer; user-select:all; background:#f0f0f0; padding:2px 4px; border-radius:3px;" title="Click to select">${latlng[0].toFixed(6)}, ${latlng[1].toFixed(6)}</span><br>
+      <a href="${gmapsUrl}" target="_blank" style="color:#2563eb; text-decoration:none; font-weight:600;">📍 Open in Google Maps</a>
+    </div>
+  `;
+  
+  marker.bindPopup(popupHtml);
+  marker._feature = feature;
+  marker._idx = idx;
+  marker._impactLatLng = latlng;
+  marker.on("click", () => {
+    marker.openPopup();
+  });
+  
+  return { marker, latlng };
+}
+
+function addFeaturesToMap(features) {
+  markerGroup.clearLayers();
+  if (activeLabel) {
+    markerGroup.removeLayer(activeLabel);
+    activeLabel = null;
+  }
+  
+  const bounds = L.latLngBounds();
+  features.slice(0, 500).forEach((feature, idx) => {
+    const result = createMarker(feature, idx);
+    if (result) {
+      result.marker.addTo(markerGroup);
+      bounds.extend(result.latlng);
+    }
+  });
+  
+  if (bounds.isValid()) {
+    map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+  }
+}
+
+function populateSummary(data) {
+  summaryData = data.summary || {};
+
+  const damageStates = [
+    { label: "Destroyed", grading: "destroyed", color: "#dc2626", className: "destroyed" },
+    { label: "Damaged", grading: "damaged", color: "#f59e0b", className: "damaged" },
+    { label: "Possibly damaged", grading: "possibly damaged", color: "#3b82f6", className: "possibly" },
+    { label: "No visible damage", grading: "no visible damage", color: "#10b981", className: "none" }
+  ];
+
+  const categoryLabels = {
+    roads: { label: "Roads", filter: "road" },
+    bridges: { label: "Bridges", filter: "bridge" },
+    power_plants: { label: "Power plants", filter: "power" },
+    hospitals: { label: "Hospitals", filter: "hospital" },
+    airfields: { label: "Airfields", filter: "airfield" },
+    heliports: { label: "Heliports", filter: "heliport" }
+  };
+  const categories = Object.entries(summaryData)
+    .filter(([key, stats]) => categoryLabels[key] && stats.total)
+    .map(([key, stats]) => {
+      const meta = categoryLabels[key];
+      const affected = (stats.destroyed || 0) + (stats.damaged || 0) + (stats.possibly_damaged || 0);
+      return { ...meta, key, total: stats.total, affected };
+    });
+  const infrastructureSelect = document.getElementById("infra-type");
+  const selectedType = infrastructureSelect.value;
+  infrastructureSelect.innerHTML = [
+    '<option value="">All Infrastructure</option>',
+    ...categories.map(item => `<option value="${item.filter}">${item.label}</option>`)
+  ].join("");
+  infrastructureSelect.value = categories.some(item => item.filter === selectedType) ? selectedType : "";
+  const total = data.total_features || categories.reduce((sum, item) => sum + item.total, 0);
+  const affected = categories.reduce((sum, item) => sum + item.affected, 0);
+  const impactPercent = total ? Math.round((affected / total) * 100) : 0;
+  const visibleDamageStates = damageStates.filter(state => (
+    state.grading !== "damaged" || sumDamageType(state.grading) > 0
+  ));
+
+  const html = `
+    <div class="summary-total"><strong>${impactPercent}%</strong><span>damaged</span></div>
+    <div class="summary-section">
+      <div class="summary-section-title">Severity <span>click to filter</span></div>
+      <div class="severity-grid">
+      ${visibleDamageStates.map(state => `
+        <button class="damage-stat" type="button" data-grading="${state.grading}">
+          <span class="damage-stat-label"><span class="damage-stat-dot" style="background:${state.color}"></span>${state.label}</span>
+          <span class="damage-stat-value ${state.className}">${sumDamageType(state.grading)}</span>
+        </button>
+      `).join('')}
+      </div>
+    </div>
+    <div class="summary-section">
+      <div class="summary-section-title">Infrastructure types <span>click to filter</span></div>
+      <div class="category-buttons">
+      ${categories.map(item => `
+        <button class="category-button" type="button" data-type="${item.filter}" title="${item.total} mapped">${item.label}</button>
+      `).join('')}
+      </div>
+    </div>
+  `;
+
+  document.getElementById("impact-summary").innerHTML = html;
+
+  document.querySelectorAll(".damage-stat").forEach(el => {
+    el.addEventListener("click", () => {
+      const grading = el.dataset.grading;
+      activeFilters.grading = activeFilters.grading === grading ? null : grading;
+      updateFilters();
+    });
+  });
+
+  document.querySelectorAll(".category-button").forEach(el => {
+    el.addEventListener("click", () => {
+      const type = el.dataset.type;
+      activeFilters.type = activeFilters.type === type ? null : type;
+      updateFilters();
+    });
+  });
+
+  updateClearButton();
+}
+
+function sumDamageType(grading) {
+  let total = 0;
+  Object.values(summaryData).forEach(stats => {
+    if (grading === "destroyed") total += stats.destroyed || 0;
+    else if (grading === "damaged") total += stats.damaged || 0;
+    else if (grading === "possibly damaged") total += stats.possibly_damaged || 0;
+    else if (grading === "no visible damage") total += stats.no_damage || 0;
+  });
+  return total;
+}
+
+function syncSummarySelection() {
+  document.querySelectorAll(".damage-stat").forEach(el => {
+    el.classList.toggle("active", el.dataset.grading === activeFilters.grading);
+  });
+  document.querySelectorAll(".category-button").forEach(el => {
+    el.classList.toggle("active", el.dataset.type === activeFilters.type);
+  });
+}
+
+function updateFilters() {
+  const infraTypeSelect = document.getElementById("infra-type");
+  const gradingSelect = document.getElementById("grading");
+  
+  infraTypeSelect.value = activeFilters.type ? activeFilters.type.replace("_", " ") : "";
+  gradingSelect.value = activeFilters.grading || "";
+  syncSummarySelection();
+  search();
+  updateClearButton();
+}
+
+function updateClearButton() {
+  const state = document.getElementById("filter-state");
+  const stateText = document.getElementById("filter-state-text");
+  if (activeFilters.type || activeFilters.grading) {
+    const filters = [activeFilters.type, activeFilters.grading].filter(Boolean);
+    stateText.textContent = `Filtering map by ${filters.join(" + ")}`;
+    state.classList.add("visible");
+  } else {
+    state.classList.remove("visible");
+  }
+}
+
+function formatFreshness(seconds) {
+  if (seconds === null || seconds === undefined) return "unknown";
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
+function formatSourceDate(value) {
+  if (!value) return "unknown date";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "unknown date" : date.toLocaleDateString(undefined, {
+    year: "numeric", month: "short", day: "numeric"
+  });
+}
+
+function clearFilters() {
+  activeFilters.type = null;
+  activeFilters.grading = null;
+  syncSummarySelection();
+  document.getElementById("infra-type").value = "";
+  document.getElementById("grading").value = "";
+  document.getElementById("q").value = "";
+  hideSuggestions();
+  updateClearButton();
+  search();
+}
+
+document.getElementById("filter-state-clear").addEventListener("click", () => {
+  clearFilters();
+});
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>'"]/g, character => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", "\"": "&quot;"
+  }[character]));
+}
+
+function hideSuggestions() {
+  const suggestions = document.getElementById("search-suggestions");
+  suggestions.classList.remove("visible");
+  suggestions.innerHTML = "";
+}
+
+function showSuggestions(value) {
+  const suggestions = document.getElementById("search-suggestions");
+  const query = value.trim().toLowerCase();
+  if (query.length < 2 || !allFeatures.length) {
+    hideSuggestions();
+    return;
+  }
+
+  const matches = [];
+  const seen = new Set();
+  allFeatures.forEach(feature => {
+    const name = String(feature.display_name || "Unnamed");
+    const type = String(feature.display_type || "Feature");
+    const damage = String(feature.damage_grade || "Not assessed");
+    const haystack = `${name} ${type} ${damage}`.toLowerCase();
+    const key = `${name}|${type}`;
+    if (haystack.includes(query) && !seen.has(key)) {
+      seen.add(key);
+      matches.push({ name, type, damage });
+    }
+  });
+
+  suggestions.innerHTML = matches.slice(0, 8).map(match => `
+    <button class="search-suggestion" type="button" role="option" data-query="${escapeHtml(match.name)}">
+      <strong>${escapeHtml(match.name)}</strong>
+      <small>${escapeHtml(match.type)} · ${escapeHtml(match.damage)}</small>
+    </button>
+  `).join("");
+  suggestions.classList.toggle("visible", matches.length > 0);
+
+  suggestions.querySelectorAll(".search-suggestion").forEach(button => {
+    button.addEventListener("click", () => {
+      document.getElementById("q").value = button.dataset.query;
+      hideSuggestions();
+      search();
+    });
+  });
+}
+
+document.getElementById("q").addEventListener("input", e => {
+  showSuggestions(e.target.value);
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => search(), 300);
+});
+
+document.addEventListener("click", e => {
+  if (!e.target.closest(".search-wrap")) hideSuggestions();
+});
+
+async function search() {
+  const q = document.getElementById("q").value.trim();
+  const infraType = document.getElementById("infra-type").value;
+  const grading = document.getElementById("grading").value;
+  
+  try {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (infraType) params.set("infra_type", infraType);
+    if (grading) params.set("grading", grading);
+    
+    const r = await fetch("/api/infrastructure/search?" + params);
+    if (!r.ok) throw new Error(await r.text());
+    const data = await r.json();
+    if (!q && !infraType && !grading) allFeatures = data.features || [];
+    
+    if (!data.cached) {
+      showLoading();
+    } else {
+      hideLoading();
+    }
+    
+    const filterText = [];
+    if (infraType) filterText.push(`${infraType} infrastructure`);
+    if (grading) filterText.push(grading);
+    const desc = filterText.length > 0 ? ` (${filterText.join(", ")})` : "";
+    
+    document.getElementById("meta").textContent = `${data.count} feature${data.count !== 1 ? 's' : ''}${desc} · Data from ${formatSourceDate(data.event_time)} · updated ${formatFreshness(data.cache_age_seconds)}`;
+    addFeaturesToMap(data.features);
+    hideLoading();
+  } catch (err) {
+    document.getElementById("meta").textContent = `Error: ${err.message}`;
+    hideLoading();
+  }
+}
+
+async function loadSummary() {
+  try {
+    const r = await fetch("/api/infrastructure/summary");
+    if (!r.ok) throw new Error(await r.text());
+    const data = await r.json();
+    populateSummary(data);
+    sidebar.classList.remove("hidden");
+  } catch (err) {
+    console.error("Summary error:", err);
+  }
+}
+
+document.getElementById("search-btn").addEventListener("click", search);
+document.getElementById("q").addEventListener("keyup", e => {
+  if (e.key === "Enter") search();
+});
+document.getElementById("infra-type").addEventListener("change", e => {
+  activeFilters.type = e.target.value || null;
+  syncSummarySelection();
+  updateClearButton();
+  search();
+});
+document.getElementById("grading").addEventListener("change", e => {
+  activeFilters.grading = e.target.value || null;
+  syncSummarySelection();
+  updateClearButton();
+  search();
+});
+
+(async () => {
+  await loadSummary();
+  await search();
+})();
+</script>
+</body>
+</html>

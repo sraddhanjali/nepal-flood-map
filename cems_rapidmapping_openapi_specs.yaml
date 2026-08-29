@@ -1,0 +1,250 @@
+openapi: 3.0.0
+info:
+  title: Copernicus EMS Rapid Mapping Activations API
+  version: 1.0.0
+paths:
+  /backend/dashboard-api/public-activations/:
+    get:
+      summary: Retrieve activations
+      description: |
+        This endpoint allows retrieving a specific activation.
+      parameters:
+        - name: code
+          in: query
+          description: Activation code
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      required: [code, name, reason, category, activator, eventTime, activationTime, sensitive, continent, countries, aws_bucket]
+                      properties:
+                        code:
+                          type: string
+                          example: EMSR568
+                        name:
+                          type: string
+                          example: Cyclone Gombe in Mozambique
+                        activator:
+                          type: string
+                          example: EC Services|DG ECHO
+                        reason:
+                          type: string
+                          example: Some reason
+                        activationTime:
+                          type: string
+                          format: date-time UTC
+                          example: 2022-03-30T22:14:00
+                        countries:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              name: 
+                                type: string
+                                example: Mozambique
+                        continent:
+                          type: string
+                          example: Africa
+                        category:
+                          type: string
+                          example: Flood
+                        subCategory:
+                          type: string
+                          example: Coastal flood
+                        eventTime:
+                          type: string
+                          format: date-time UTC
+                          example: 2022-03-30T22:14:00
+                        sensitive:
+                          type: boolean
+                          example: false
+                        gdacsId:
+                          type: string
+                          example: EQ1357591
+                        centroid:
+                          type: string
+                          example: 'POINT (10.5197 22.2760)'
+                        extent:
+                          type: string
+                          example: "POLYGON ((153.336319 -28.930715511,153.336319 -28.935837,153.331349206 -28.935822177,153.331233101))"
+                        aws_bucket:
+                          type: string
+                          description: "The url of the AWS S3 bucket containing the GeoJSON, Vector Tiles, COGs and SLD for the viewer"
+                        productsPath:
+                         type: string
+                         description: "The path to the zipfile containing all the last version of the products of the activation"
+                        infobulletins:
+                          type: array
+                          items:
+                            type: string
+                            description: links to information bulletins
+                        stats:
+                          type: object
+                          description: statistics extracted from the activaiton summary table
+                          properties:
+                            category:
+                              type: number
+                              description: the statistic's category total number
+                        relatedevents:
+                          type: array
+                          items:
+                            type: string
+                            description: link to related events such as RRM activations
+                        closed:
+                          type: boolean
+                          description: whether the activation is ongoing or not
+                        reportlink:
+                          type: string
+                          description: link to the situational reporting product
+                        aois:
+                          type: array
+                          items:
+                            type: object
+                            required: [name, number]
+                            properties:
+                              number:
+                                type: integer
+                                example: 1
+                              name:
+                                type: string
+                              extent:
+                                type: string
+                                example: "POLYGON ((153.336319 -28.930715511,153.336319 -28.935837,153.331349206 -28.935822177,153.331233101))"
+                              blpPath:
+                                type: string
+                                description: "The path of the Base Layers Package for the AOI"
+                              activationCode:
+                                type: string
+                                description: "The activation code, useful when programmatically parsing the API"
+                              products:
+                                type: array
+                                items:
+                                  type: object
+                                  required: [type, monitoring, serviceLevel, productionSite, feasible]
+                                  properties:
+                                    type:
+                                      type: string
+                                      enum: [FEP,REF,DEL,GRA]
+                                      example: DEL
+                                      description: "FEP = First Estimate, DEL = Delineation, GRA = Grading, REF = Reference"
+                                    monitoring:
+                                      type: boolean
+                                      description: "Whether it is a monitoring product"
+                                    monitoringNumber:
+                                      type: integer
+                                      example: 1 if monitoring true
+                                    extent:
+                                      type: string
+                                      example: "POLYGON ((153.336319 -28.930715511,153.336319 -28.935837,153.331349206 -28.935822177,153.331233101))"
+                                    feasible:
+                                      type: boolean
+                                      example: true
+                                      description: "If the product was actually produced"
+                                    activationCode:
+                                      type: string
+                                      description: "The activation code, useful when programmatically parsing the API"
+                                    aoiName:
+                                      type: string
+                                      description: "The aoi name, useful when programmatically parsing the API"
+                                    aoiNumber:
+                                      type: string
+                                      description: "The aoi number, useful when programmatically parsing the API"
+                                    expectedDelivery:
+                                      type: string
+                                      format: date-time UTC
+                                      example: 2023-05-05T19:10:00
+                                      description: "The expected delivery of the product in UTC"
+                                    stats:
+                                      type: object
+                                      description: Statistis extracted from the product consequence table
+                                      properties:
+                                        category: 
+                                          type: object
+                                          description: the category's subcategories
+                                          properties:
+                                            subcategory:
+                                              type: object
+                                              description: The subcategory statistics
+                                              required: [unit, total]
+                                              properties:
+                                                unit:
+                                                  type: string
+                                                  description: the measurement unit
+                                                total:
+                                                  type: number
+                                                  description: the total amount in the product area
+                                                affected:
+                                                  type: number
+                                                  description: The amount affected, if applicable.
+                                    layers:
+                                      type: array
+                                      items:
+                                        type: object
+                                        properties:
+                                          name:
+                                            type: string
+                                          type:
+                                            type: string
+                                            description: "cog = Cloud Optimized GeoTIFF, json = Layer available as geoJSON, vt = Layer available also as vector tiles, in this case the folder path is listed. For each layer a corresponding SLD file is available with the same layer name and .sld es extension"
+                                    downloadPath:
+                                      type: string
+                                      description: "The path of the product zipfile"
+                                    version:
+                                      type: object
+                                      required: [uuid, number, statusCode]
+                                      properties:
+                                        uuid:
+                                          type: string
+                                          format: uuid
+                                          example: d290f1ee-6c54-4b01-90e6-d701748f0851
+                                        statusCode:
+                                          type: string
+                                          enum: [W, I, F, N]
+                                          example:  W (Waiting for data) | I (In production) | F (Production finished) | N (Not produced)
+                                        reason:
+                                          type: string
+                                          description: "The reason of not being produced or why the new version was released"
+                                        number:
+                                          type: integer
+                                        deliveryTime:
+                                          type: string
+                                          format: date-time UTC
+                                          example: 2022-03-30T22:14:00
+                                    images:
+                                      type: array
+                                      items:
+                                        type: object
+                                        required: [uuid, new, sensorType, resolutionClass]
+                                        properties:
+                                          uuid:
+                                            type: string
+                                            format: uuid
+                                          new:
+                                            type: boolean
+                                            default: true
+                                            description: "If is a new tasking or an archive"
+                                          sensorType:
+                                            type: string
+                                            enum: [optical, sar]
+                                          resolutionClass:
+                                            type: string
+                                            enum: [HR, VHR2, VHR1, Aerial]
+                                          sensorName:
+                                            type: string
+                                          acquisitionTime:
+                                            type: string
+                                            format: date-time UTC
+                                          fileName:
+                                            type: string
+

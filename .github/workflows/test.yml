@@ -1,0 +1,31 @@
+name: Test
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: python -m py_compile app.py
+      - run: python -m unittest discover -s tests
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: node --check vite.config.js
+      - run: >-
+          node -e 'const fs=require("fs"); const html=fs.readFileSync("static/index.html","utf8"); const scripts=html.split("<script").slice(1).map(s=>s.slice(s.indexOf(">")+1,s.indexOf("</script>"))).filter(Boolean); for (const script of scripts) new Function(script);'

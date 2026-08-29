@@ -1,0 +1,54 @@
+services:
+  api:
+    profiles: ["prod"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nepal-cems-api
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=info
+    volumes:
+      - ./app.py:/app/app.py
+      - ./static:/app/static
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  api-dev:
+    profiles: ["dev"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nepal-cems-api-dev
+    command: uvicorn app:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=info
+    volumes:
+      - ./app.py:/app/app.py
+      - ./static:/app/static
+
+  frontend:
+    profiles: ["dev"]
+    image: node:20-alpine
+    container_name: nepal-cems-frontend-dev
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_TARGET=http://api-dev:8000
+    volumes:
+      - .:/app
+      - /app/node_modules
+    depends_on:
+      - api-dev
